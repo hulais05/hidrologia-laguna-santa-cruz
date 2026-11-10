@@ -5879,9 +5879,9 @@
     "max_historico_cons_m3": 249554.0,
     "max_historico_prof_m3": 537502.0,
     "perdida_evaporacion_estival_media_m3": 63335.0,
-    "cota_fondo_msnm": 112.2,
-    "cota_borde_ppal_msnm": 113.05,
-    "cota_borde_exp_msnm": 113.8,
+    "cota_fondo_msnm": 112.04,
+    "cota_borde_ppal_msnm": 113.33,
+    "cota_borde_exp_msnm": 114.21,
     "cota_divisoria_max_msnm": 215.9,
     "cuenca_aporte_km2": 38.4,
     "cuenca_aporte_ha": 3840.0,
@@ -5892,7 +5892,8 @@
       "utm_19s_epsg32719": "E 618.068,7 m | N 4.723.684,9 m",
       "posgar2007_faja2_epsg5344": "X (Este) 2.618.116,2 m | Y (Norte) 4.723.539,9 m",
       "inchauspe_faja2_epsg22192": "X (Este) 2.618.205,6 m | Y (Norte) 4.723.740,7 m"
-    }
+    },
+    "cota_fosa_central_msnm": 112.49
   },
   "hypsometry": [
     {
@@ -6097,6 +6098,71 @@
       "verano_vol_base_m3": 0.0,
       "verano_vol_cons_m3": 0.0,
       "verano_vol_prof_m3": 0.0
+    }
+  ],
+  "anillos_batimetricos": [
+    {
+      "anillo": "1. Punto m\u00e1s bajo absoluto (Cota Inferior)",
+      "freq_inv": "> 80 %",
+      "area_anillo_ha": "M\u00edn. absoluto",
+      "area_acum_ha": "0,5 ha",
+      "cota_msnm": "112,04 m",
+      "tirante_ppal_m": "1,29 m",
+      "tirante_max_m": "2,17 m"
+    },
+    {
+      "anillo": "2. Fosa Central Profunda",
+      "freq_inv": "75 % \u2013 100 %",
+      "area_anillo_ha": "6,39 ha",
+      "area_acum_ha": "6,39 ha",
+      "cota_msnm": "112,49 m (P25: 112,40 m)",
+      "tirante_ppal_m": "0,84 \u2013 0,93 m",
+      "tirante_max_m": "1,72 \u2013 1,81 m"
+    },
+    {
+      "anillo": "3. Cuenco Interior Frecuente",
+      "freq_inv": "65 % \u2013 75 %",
+      "area_anillo_ha": "18,09 ha",
+      "area_acum_ha": "24,48 ha",
+      "cota_msnm": "112,62 m (P25: 112,47 m)",
+      "tirante_ppal_m": "0,71 \u2013 0,86 m",
+      "tirante_max_m": "1,59 \u2013 1,74 m"
+    },
+    {
+      "anillo": "4. Plataforma Intermedia",
+      "freq_inv": "50 % \u2013 65 %",
+      "area_anillo_ha": "12,33 ha",
+      "area_acum_ha": "36,81 ha",
+      "cota_msnm": "113,01 m (P25: 112,80 m)",
+      "tirante_ppal_m": "0,32 \u2013 0,53 m",
+      "tirante_max_m": "1,20 \u2013 1,41 m"
+    },
+    {
+      "anillo": "5. Borde Cubeta Principal (Lleno Normal)",
+      "freq_inv": "35 % \u2013 50 %",
+      "area_anillo_ha": "10,17 ha",
+      "area_acum_ha": "47,43 ha",
+      "cota_msnm": "113,29 \u2013 113,33 m",
+      "tirante_ppal_m": "0,00 m (Coronamiento)",
+      "tirante_max_m": "0,88 \u2013 0,92 m"
+    },
+    {
+      "anillo": "6. Planicie de Expansi\u00f3n",
+      "freq_inv": "20 % \u2013 35 %",
+      "area_anillo_ha": "17,28 ha",
+      "area_acum_ha": "64,26 ha",
+      "cota_msnm": "113,68 m",
+      "tirante_ppal_m": "+0,35 m s/borde ppal",
+      "tirante_max_m": "0,53 m"
+    },
+    {
+      "anillo": "7. Borde de Expansi\u00f3n M\u00e1xima",
+      "freq_inv": "5 % \u2013 20 %",
+      "area_anillo_ha": "3,51 ha",
+      "area_acum_ha": "67,77 ha",
+      "cota_msnm": "113,92 \u2013 114,21 m",
+      "tirante_ppal_m": "+0,88 m s/borde ppal",
+      "tirante_max_m": "0,00 m (Desborde m\u00e1x)"
     }
   ]
 }
