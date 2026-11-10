@@ -1,0 +1,1224 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hidrología Satelital, Volúmenes (m³) y Dossier de Permiso · Laguna Objetivo (1985–2026)</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    :root {
+      --bg: #0b1120;
+      --panel: #111827;
+      --panel-alt: #1e293b;
+      --border: #26334d;
+      --fg: #f1f5f9;
+      --muted: #94a3b8;
+      --blue: #38bdf8;
+      --blue-deep: #0284c7;
+      --amber: #f59e0b;
+      --emerald: #10b981;
+      --rose: #f43f5e;
+      --purple: #a855f7;
+      --radius: 12px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--fg);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif;
+      line-height: 1.55;
+      padding: clamp(16px, 3vw, 36px);
+    }
+    .container {
+      max-width: 1280px;
+      margin: 0 auto;
+      display: grid;
+      gap: 28px;
+    }
+    header {
+      background: linear-gradient(135deg, #0f172a 0%, #172554 100%);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      display: grid;
+      gap: 12px;
+    }
+    .badge-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+    .badge {
+      background: rgba(56, 189, 248, 0.14);
+      color: var(--blue);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+    .badge.amber {
+      background: rgba(245, 158, 11, 0.14);
+      color: var(--amber);
+      border-color: rgba(245, 158, 11, 0.35);
+    }
+    .badge.emerald {
+      background: rgba(16, 185, 129, 0.14);
+      color: var(--emerald);
+      border-color: rgba(16, 185, 129, 0.35);
+    }
+    h1 {
+      margin: 0;
+      font-size: clamp(1.45rem, 2.5vw, 2.05rem);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    h2 {
+      margin: 0;
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: #f8fafc;
+    }
+    h3 {
+      margin: 0;
+      font-size: 0.98rem;
+      font-weight: 600;
+      color: #f8fafc;
+    }
+    p { margin: 0; color: #cbd5e1; max-width: 90ch; }
+    .muted { color: var(--muted); font-size: 0.85rem; }
+
+    .kpis {
+      display: grid;
+      gap: 16px;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 22px;
+      display: grid;
+      gap: 14px;
+      align-content: start;
+    }
+    .kpi-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+      flex: none;
+    }
+    .kpi-big {
+      font-size: 1.95rem;
+      font-weight: 700;
+      line-height: 1.1;
+      font-variant-numeric: tabular-nums;
+      color: #fff;
+    }
+    .kpi-big small {
+      font-size: 0.92rem;
+      font-weight: 500;
+      color: var(--muted);
+    }
+    .kpi-list {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 4px;
+      font-size: 0.82rem;
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .grid-2 {
+      display: grid;
+      gap: 20px;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 490px), 1fr));
+    }
+    .grid-3 {
+      display: grid;
+      gap: 16px;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+    }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .btn-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    button, select, input[type="number"] {
+      background: var(--panel-alt);
+      color: var(--fg);
+      border: 1px solid var(--border);
+      padding: 7px 13px;
+      border-radius: 8px;
+      font-size: 0.83rem;
+      cursor: pointer;
+    }
+    button.active {
+      background: var(--blue-deep);
+      border-color: var(--blue);
+      color: #fff;
+      font-weight: 600;
+    }
+    .chart-box {
+      position: relative;
+      width: 100%;
+      min-height: 360px;
+    }
+    .chart-box.short {
+      min-height: 290px;
+    }
+    .tooltip {
+      position: absolute;
+      pointer-events: none;
+      background: rgba(15, 23, 42, 0.96);
+      border: 1px solid var(--blue);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 0.8rem;
+      color: #f8fafc;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      z-index: 20;
+      display: none;
+      min-width: 220px;
+    }
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+    .legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .legend i {
+      display: inline-block;
+      width: 18px;
+      height: 3px;
+      border-radius: 2px;
+    }
+    .img-frame {
+      width: 100%;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      display: block;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.83rem;
+      font-variant-numeric: tabular-nums;
+    }
+    th, td {
+      padding: 8px 11px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    th {
+      color: var(--muted);
+      font-weight: 600;
+      background: rgba(30, 41, 59, 0.6);
+      position: sticky;
+      top: 0;
+    }
+    tr:hover td {
+      background: rgba(56, 189, 248, 0.06);
+    }
+    .table-scroll {
+      max-height: 360px;
+      overflow-y: auto;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+    .insight-box {
+      background: rgba(2, 132, 199, 0.1);
+      border-left: 4px solid var(--blue);
+      padding: 14px 18px;
+      border-radius: 6px;
+      font-size: 0.89rem;
+      display: grid;
+      gap: 8px;
+    }
+    .insight-box.amber {
+      background: rgba(245, 158, 11, 0.08);
+      border-left-color: var(--amber);
+    }
+    .insight-box.emerald {
+      background: rgba(16, 185, 129, 0.08);
+      border-left-color: var(--emerald);
+    }
+    .sim-panel {
+      background: #0f172a;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px;
+      display: grid;
+      gap: 16px;
+    }
+    .slider-row {
+      display: grid;
+      gap: 6px;
+    }
+    .slider-row label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.85rem;
+      color: #cbd5e1;
+      font-weight: 500;
+    }
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--blue);
+    }
+    .checklist {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 10px;
+    }
+    .checklist li {
+      background: rgba(30, 41, 59, 0.55);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 11px 14px;
+      font-size: 0.85rem;
+    }
+    .tag-missing {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      background: rgba(245, 158, 11, 0.2);
+      color: var(--amber);
+      margin-right: 6px;
+    }
+    .tag-ready {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      background: rgba(16, 185, 129, 0.2);
+      color: var(--emerald);
+      margin-right: 6px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="badge-row">
+        <span class="badge">HIDROLOGÍA Y VOLÚMENES (m³) · 1985–2026</span>
+        <span class="badge">LANDSAT 5/7/8/9 + SENTINEL-2 + COPERNICUS DEM 30m</span>
+        <span class="badge amber">LAT 47°37'46.09"S · LON 67°25'42.3"O (SANTA CRUZ)</span>
+        <span class="badge emerald">DOSSIER PERMISO DE USO DE AGUA (LEY PROV. 1451)</span>
+      </div>
+      <h1>Análisis Hidro-Volumétrico (m³) y Base Técnica para Permiso de Uso de Agua (1985–2026)</h1>
+      <p>
+        Evaluación integral de superficie inundada (<strong>ha</strong>), volumen almacenado (<strong>m³</strong>), curva hipsométrica Cota–Área–Volumen,
+        garantía hidrológica y balance entre <strong>períodos húmedos de recarga (Invierno May–Oct)</strong> y <strong>períodos secos (Verano Nov–Abr)</strong>.
+      </p>
+    </header>
+
+    <!-- Selector Global de Escenario Batimétrico -->
+    <section class="card" style="padding:14px 20px">
+      <div class="controls">
+        <div>
+          <strong>Escenario Batimétrico Activo para Cálculo de Volúmenes (m³):</strong>
+          <span class="muted" style="margin-left:8px">Calibrado con Copernicus DEM GLO-30 (cota fondo 112,20 m s.n.m.) + isobatas de hidroperíodo satelital</span>
+        </div>
+        <div class="btn-group">
+          <button id="scen-cons" onclick="setBathyScenario('cons')">Conservador / Somero (z̄ = 0,33 m)</button>
+          <button class="active" id="scen-base" onclick="setBathyScenario('base')">Base DEM Copernicus (z̄ = 0,50 m)</button>
+          <button id="scen-prof" onclick="setBathyScenario('prof')">Profundo (z̄ = 0,70 m)</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- KPIs Superficie + Volumen m3 -->
+    <section class="kpis" id="kpi-container"></section>
+
+    <!-- Síntesis Ejecutiva -->
+    <section class="card">
+      <h2>Síntesis Hidro-Volumétrica: Funcionamiento entre Invierno (Húmedo) y Verano (Seco)</h2>
+      <div class="insight-box" id="synthesis-box">Cargando datos...</div>
+    </section>
+
+    <!-- 1. Serie Anual 1985-2026 (Volumen m3 / Área ha) -->
+    <section class="card">
+      <div class="controls">
+        <div>
+          <h2>1. Serie Histórica Anual (1985–2026): Volumen en m³ y Superficie en ha (Invierno vs. Verano)</h2>
+          <p class="muted">Evolución interanual del almacenamiento hídrico en temporada húmeda de recarga (May–Oct) frente al estiaje de verano (Nov–Abr).</p>
+        </div>
+        <div class="btn-group">
+          <button class="active" id="btn-mode-vol" onclick="setSeriesMode('vol')">Volumen Almacenado (m³)</button>
+          <button id="btn-mode-seasonal" onclick="setSeriesMode('seasonal')">Superficie Espejo (ha)</button>
+          <button id="btn-mode-max" onclick="setSeriesMode('max')">Máximo vs. Media (ha)</button>
+          <button id="btn-mode-mndwi" onclick="setSeriesMode('mndwi')">Índice MNDWI</button>
+        </div>
+      </div>
+      <div class="legend" id="series-legend"></div>
+      <div class="chart-box" id="chart-annual">
+        <div class="tooltip" id="tip-annual"></div>
+      </div>
+    </section>
+
+    <!-- 2. Modelo Volumétrico: Curva Cota-Área-Volumen + Simulador de Permiso de Extracción -->
+    <div class="grid-2">
+      <section class="card">
+        <div>
+          <h2>2. Curva Hipsométrica Cota – Área (ha) – Volumen (m³)</h2>
+          <p class="muted">Relación física de llenado de la cubeta desde el fondo (112,20 m s.n.m.) hasta la expansión máxima (113,80 m s.n.m.) en los 3 escenarios.</p>
+        </div>
+        <div class="legend">
+          <span><i style="background:#38bdf8"></i> Escenario Base (m³)</span>
+          <span><i style="background:#f59e0b;border-top:2px dashed #f59e0b;background:none"></i> Conservador 0,65x (m³)</span>
+          <span><i style="background:#10b981;border-top:2px dashed #10b981;background:none"></i> Profundo 1,40x (m³)</span>
+        </div>
+        <div class="chart-box short" id="chart-hypsometry">
+          <div class="tooltip" id="tip-hypsometry"></div>
+        </div>
+        <div class="table-scroll" style="max-height:210px">
+          <table id="table-exceedance">
+            <thead>
+              <tr>
+                <th>Garantía (Excedencia)</th>
+                <th>Espejo Invierno</th>
+                <th>Volumen Invierno (m³)</th>
+                <th>Espejo Verano</th>
+                <th>Volumen Verano (m³)</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card">
+        <div>
+          <h2>3. Simulador de Cupo de Extracción para Solicitud de Permiso</h2>
+          <p class="muted">Evaluá en vivo el impacto del caudal solicitado frente al almacenamiento invernal y frente a la pérdida natural por evaporación estival.</p>
+        </div>
+        <div class="sim-panel">
+          <div class="slider-row">
+            <label>
+              <span>Caudal Diario Solicitado:</span>
+              <strong id="lbl-sim-q" style="color:#38bdf8">120 m³/día (1,39 L/s)</strong>
+            </label>
+            <input type="range" id="sim-q" min="20" max="600" step="10" value="120" oninput="updateSimulator()" />
+          </div>
+          <div class="slider-row">
+            <label>
+              <span>Régimen / Días de Bombeo al Año:</span>
+              <strong id="lbl-sim-days" style="color:#38bdf8">180 días/año (Ventana May–Oct)</strong>
+            </label>
+            <input type="range" id="sim-days" min="60" max="365" step="15" value="180" oninput="updateSimulator()" />
+          </div>
+          <div class="kpis" style="grid-template-columns: repeat(2, 1fr); gap:10px" id="sim-kpis"></div>
+          <div class="insight-box emerald" id="sim-verdict"></div>
+        </div>
+      </section>
+    </div>
+
+    <!-- 3. Ciclo Estacional Mensual y Comparativa Decadal con Volúmenes -->
+    <div class="grid-2">
+      <section class="card">
+        <div>
+          <h2>4. Régimen Mensual (Enero–Diciembre): Almacenamiento y Balance Climático</h2>
+          <p class="muted">Ciclo anual promedio (1985–2026) mostrando la ventana óptima de recarga y captación (Mayo–Octubre) frente a la evaporación estival.</p>
+        </div>
+        <div class="legend">
+          <span><i style="background:#38bdf8"></i> Volumen Medio Mensual (m³)</span>
+          <span><i style="background:rgba(56,189,248,0.25);height:10px"></i> Rango Intercuartil P25–P75</span>
+          <span><i style="background:#f59e0b"></i> Lluvia Media Mensual (mm)</span>
+        </div>
+        <div class="chart-box short" id="chart-monthly">
+          <div class="tooltip" id="tip-monthly"></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div>
+          <h2>5. Evolución por Décadas (1985–2026): Superficie (ha) y Volumen (m³)</h2>
+          <p class="muted">Comparación decadal de disponibilidad en período húmedo (Invierno) y seco (Verano) bajo el escenario batimétrico seleccionado.</p>
+        </div>
+        <div class="table-scroll" style="max-height:none">
+          <table id="table-decades">
+            <thead>
+              <tr>
+                <th>Período</th>
+                <th>Escenas</th>
+                <th>Invierno (ha / m³)</th>
+                <th>Verano (ha / m³)</th>
+                <th>Pico Máximo (m³)</th>
+                <th>Retención</th>
+                <th>Lluvia</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="chart-box short" id="chart-decades" style="min-height:185px"></div>
+      </section>
+    </div>
+
+    <!-- Mapas Topográficos, Batimétricos e Hidroperíodo -->
+    <section class="card">
+      <div>
+        <h2>6. Relieve de Cuenca (Copernicus DEM 30m), Modelo Batimétrico e Hidroperíodo por Píxel</h2>
+        <p class="muted">
+          Arriba: Topografía del bajo endorreico (cota fondo 112,2 m s.n.m.) y distribución espacial del tirante de agua (0,0 a 1,6 m).
+          Abajo: Frecuencia de agua libre por píxel en Invierno (May–Oct), Verano (Nov–Abr) y cambio entre décadas.
+        </p>
+      </div>
+      <img src="img/cuenca_batimetry_map.png" alt="Mapa Topográfico y Batimétrico" class="img-frame" />
+      <img src="img/hydroperiod_maps.png" alt="Mapas de Hidroperíodo Invierno vs Verano" class="img-frame" />
+    </section>
+
+    <!-- Tira Histórica Filmstrip -->
+    <section class="card">
+      <div>
+        <h2>7. Evidencia Visual Multi-Década (1986–2025): Color Real (RGB) e Índice de Agua (MNDWI)</h2>
+        <p class="muted">Secuencia histórica auditable desde Landsat 5 (1986) hasta Landsat 9 y Copernicus Sentinel-2.</p>
+      </div>
+      <img src="img/filmstrip_1985_2026.png" alt="Tira histórica 1986-2026" class="img-frame" />
+    </section>
+
+    <!-- NUEVA SECCIÓN: DOSSIER TÉCNICO-REGULATORIO Y CHECKLIST PARA EL REDACTOR DEL PERMISO -->
+    <section class="card" style="border-color: var(--blue)">
+      <div>
+        <div class="badge-row" style="margin-bottom:8px">
+          <span class="badge emerald">GUÍA PARA EL REDACTOR DEL EXPEDIENTE</span>
+          <span class="badge">PROVINCIA DE SANTA CRUZ · RECURSOS HÍDRICOS (CAP - LEY 1451) / MINERÍA</span>
+        </div>
+        <h2>8. Dossier Técnico para Solicitud de Permiso de Uso de Agua: Qué ya tenemos resuelto y qué falta relevar</h2>
+        <p class="muted">
+          Esta sección reúne todos los parámetros geodésicos, morfométricos e hidrológicos listos para volcar en el documento técnico,
+          junto con el listado exacto de datos complementarios de campo/administrativos que debe incorporar quien redacte la presentación.
+        </p>
+      </div>
+
+      <div class="grid-3">
+        <!-- Columna 1: Datos Oficiales Listos -->
+        <div class="sim-panel">
+          <h3>A. Ficha Geodésica y Morfométrica (Lista para el Documento)</h3>
+          <ul class="checklist" id="list-ready-params"></ul>
+        </div>
+
+        <!-- Columna 2: Argumento Técnico de Sustentabilidad -->
+        <div class="sim-panel">
+          <h3>B. Argumentos Técnicos Clave y Regla de Operación</h3>
+          <ul class="checklist" id="list-arguments"></ul>
+        </div>
+
+        <!-- Columna 3: Información que Falta Relevar a Campo / Gabinete -->
+        <div class="sim-panel">
+          <h3>C. ¿Qué información falta para cerrar el documento ante la Autoridad?</h3>
+          <ul class="checklist">
+            <li>
+              <span class="tag-missing">FALTA 1 · CAMPO</span>
+              <strong>Batimetría expeditiva / Calibración de Tirante in-situ:</strong>
+              Medir en campo la profundidad real en el punto objetivo (<code>47°37'46.09"S, 67°25'42.3"O</code>) con sonda o regla graduada (limnímetro) en 1 campaña para fijar con exactitud cuál de los 3 escenarios (Conservador 0,33 m, Base 0,50 m o Profundo 0,70 m) rige en el expediente.
+            </li>
+            <li>
+              <span class="tag-missing">FALTA 2 · LABORATORIO</span>
+              <strong>Análisis Físico-Químico de Calidad de Agua:</strong>
+              Muestra puntual (pH, Conductividad Eléctrica, SDT, Cloruros, Sulfatos, Alcalinidad, Dureza, Cations/Aniones). En bajos endorreicos patagónicos el agua suele ser salobre/bicarbonatada-sulfatada: demostrar que <em>no es apta para consumo humano</em> refuerza la aprobación para uso industrial/perforación/supresión de polvo.
+            </li>
+            <li>
+              <span class="tag-missing">FALTA 3 · CATASTRO / LEGAL</span>
+              <strong>Datos Catastrales del Predio y Conformidad del Superficiario:</strong>
+              Identificar Matrícula / Estancia / Nomenclatura Catastral en el Departamento Deseado y adjuntar acuerdo o notificación al superficiario y servidumbre de paso (son solo <strong>540 m</strong> desde la orilla norte hasta el camino existente).
+            </li>
+            <li>
+              <span class="tag-missing">FALTA 4 · INGENIERÍA DE TOMA</span>
+              <strong>Memoria Descriptiva del Sistema de Captación:</strong>
+              Especificar caudal instantáneo de bomba (L/s), modalidad (motobomba portátil sobre camión cisterna o manguera flotante con filtro chupador para no remover bentos/sedimento), horas de bombeo/día y caudalímetro totalizador.
+            </li>
+            <li>
+              <span class="tag-missing">FALTA 5 · DEMANDA DEL PROYECTO</span>
+              <strong>Cronograma Mensual de Demanda y Destino del Agua:</strong>
+              Declarar el uso específico (ej. perforación exploratoria, riego de caminos/control de material particulado, obradores) y el plazo del permiso (temporal o anual renovable).
+            </li>
+            <li>
+              <span class="tag-missing">FALTA 6 · LÍNEA DE BASE BIÓTICA</span>
+              <strong>Relevamiento Rápido de Avifauna Acuática / Vega Periférica:</strong>
+              Verificación visual de presencia/ausencia de especies sensibles (ej. macá tobiano / flamencos) para respaldar el umbral de reserva ecológica estival propuesto.
+            </li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9. Tabla Auditable de Escenas -->
+    <section class="card">
+      <div class="controls">
+        <div>
+          <h2>9. Registro Auditable de las 199 Escenas Satelitales (1985–2026) con Volumen Estimado (m³)</h2>
+          <p class="muted">Cada fila incluye fecha, estación, sensor, área de espejo libre (ha), cota estimada (m s.n.m.), volumen (m³) e ID oficial de escena.</p>
+        </div>
+        <div class="btn-group">
+          <select id="filter-season" onchange="renderScenesTable()">
+            <option value="ALL">Todas las estaciones</option>
+            <option value="Invierno">Solo Invierno / Húmedo (May–Oct)</option>
+            <option value="Verano">Solo Verano / Seco (Nov–Abr)</option>
+          </select>
+          <select id="filter-sensor" onchange="renderScenesTable()">
+            <option value="ALL">Todos los satélites</option>
+            <option value="Landsat">Landsat 5/7/8/9 (1985–2026)</option>
+            <option value="Sentinel-2">Copernicus Sentinel-2 (2016–2026)</option>
+          </select>
+          <button onclick="downloadCSV()">Descargar CSV Completo (con Volúmenes m³)</button>
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table id="table-scenes">
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Estación</th>
+              <th>Satélite</th>
+              <th>Espejo Agua Libre (ha)</th>
+              <th>Cota (m s.n.m.)</th>
+              <th>Tirante Máx (m)</th>
+              <th>Volumen Estimado (m³)</th>
+              <th>MNDWI Medio</th>
+              <th>ID Escena Oficial</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    let DATA = null;
+    let SERIES_MODE = 'vol';
+    let BATHY_SCEN = 'base'; // 'cons' (0.65), 'base' (1.0), 'prof' (1.40)
+
+    const fmtInt = d3.format(',.0f');
+    const fmtM3 = v => v === null || v === undefined ? 's/d' : fmtInt(Math.round(v)).replace(/,/g, '.') + ' m³';
+
+    function scenFactor() {
+      if (BATHY_SCEN === 'cons') return 0.65;
+      if (BATHY_SCEN === 'prof') return 1.40;
+      return 1.00;
+    }
+
+    function scenLabel() {
+      if (BATHY_SCEN === 'cons') return 'Conservador (0,65x)';
+      if (BATHY_SCEN === 'prof') return 'Profundo (1,40x)';
+      return 'Base DEM (1,00x)';
+    }
+
+    async function init() {
+      const resp = await fetch('dashboard_data.json?t=' + Date.now());
+      DATA = await resp.json();
+      refreshAll();
+      window.addEventListener('resize', () => {
+        renderAnnualChart();
+        renderHypsometryChart();
+        renderMonthlyChart();
+        renderDecadesChart();
+      });
+    }
+
+    function setBathyScenario(scen) {
+      BATHY_SCEN = scen;
+      ['cons', 'base', 'prof'].forEach(s => {
+        document.getElementById('scen-' + s).classList.toggle('active', s === scen);
+      });
+      refreshAll();
+    }
+
+    function refreshAll() {
+      renderKPIs();
+      renderSynthesis();
+      renderAnnualChart();
+      renderHypsometryChart();
+      renderExceedanceTable();
+      updateSimulator();
+      renderMonthlyChart();
+      renderDecades();
+      renderDossierLists();
+      renderScenesTable();
+    }
+
+    function renderKPIs() {
+      const k = DATA.kpis;
+      const g = DATA.geometria;
+      const v = DATA.volumenes_resumen;
+      const f = scenFactor();
+
+      const winVol = v.invierno_media_base_m3 * f;
+      const winP75Vol = v.invierno_p75_base_m3 * f;
+      const sumVol = v.verano_media_base_m3 * f;
+      const sumP75Vol = v.verano_p75_base_m3 * f;
+      const evapLoss = v.perdida_evaporacion_estival_media_m3 * f;
+      const coreFullVol = v.cubeta_ppal_llena_base_m3 * f;
+      const maxVol = v.max_historico_base_m3 * f;
+
+      const items = [
+        {
+          title: `Invierno / Recarga (May–Oct) · ${scenLabel()}`,
+          color: '#38bdf8',
+          big: `${fmtM3(winVol)}`,
+          list: [
+            `Superficie media: ${k.invierno_media_ha} ha (P75: ${k.invierno_p75_ha} ha)`,
+            `Volumen P75 (año húmedo): ${fmtM3(winP75Vol)}`,
+            `Presencia de agua en invierno: ${k.frecuencia_invierno_agua_pct}% de los años`
+          ]
+        },
+        {
+          title: `Verano / Estiaje (Nov–Abr) · ${scenLabel()}`,
+          color: '#f59e0b',
+          big: `${fmtM3(sumVol)}`,
+          list: [
+            `Superficie media: ${k.verano_media_ha} ha (P75: ${k.verano_p75_ha} ha)`,
+            `Volumen P75 en verano: ${fmtM3(sumP75Vol)}`,
+            `Pérdida natural por evaporación estival: ${fmtM3(evapLoss)}/año`
+          ]
+        },
+        {
+          title: 'Capacidad Volumétrica de la Cubeta',
+          color: '#10b981',
+          big: `${fmtM3(coreFullVol)}`,
+          list: [
+            `Cubeta Principal llena (${g.cubeta_principal_ha} ha, cota ${v.cota_borde_ppal_msnm} m)`,
+            `Expansión máxima (${g.cubeta_expansion_ha} ha): ${fmtM3(maxVol)}`,
+            `Cuenca de aporte topográfica: ${v.cuenca_aporte_km2} km² (${fmtInt(v.cuenca_aporte_ha)} ha)`
+          ]
+        },
+        {
+          title: 'Serie Auditable (1985–2026 · 41 Años)',
+          color: '#a855f7',
+          big: `${k.total_escenas} <small>escenas</small>`,
+          list: [
+            `Landsat 5/7/8/9 (30 m): ${k.landsat_escenas} escenas`,
+            `Copernicus Sentinel-2 (10 m): ${k.sentinel2_escenas} escenas`,
+            `Última década (2015–26): retención estival del 77,7%`
+          ]
+        }
+      ];
+      document.getElementById('kpi-container').innerHTML = items.map(it => `
+        <div class="card">
+          <div class="kpi-title"><span class="dot" style="background:${it.color}"></span>${it.title}</div>
+          <div class="kpi-big">${it.big}</div>
+          <ul class="kpi-list">${it.list.map(l => `<li>• ${l}</li>`).join('')}</ul>
+        </div>
+      `).join('');
+    }
+
+    function renderSynthesis() {
+      const k = DATA.kpis;
+      const v = DATA.volumenes_resumen;
+      const f = scenFactor();
+      const winVol = fmtM3(v.invierno_media_base_m3 * f);
+      const sumVol = fmtM3(v.verano_media_base_m3 * f);
+      const evapLoss = fmtM3(v.perdida_evaporacion_estival_media_m3 * f);
+      const coreFull = fmtM3(v.cubeta_ppal_llena_base_m3 * f);
+
+      document.getElementById('synthesis-box').innerHTML = `
+        <div><strong>1. Almacenamiento en Período Húmedo (Invierno–Primavera, Mayo a Octubre):</strong> Con una cuenca de aporte de <strong>${v.cuenca_aporte_km2} km²</strong> (divisoria hasta 215,9 m s.n.m. drenando hacia la cota de fondo 112,2 m s.n.m.), la laguna almacena en promedio <strong>${winVol}</strong> (${k.invierno_media_ha} ha) durante el semestre invernal en el escenario <em>${scenLabel()}</em>, llegando a <strong>${coreFull}</strong> al llenarse la cubeta principal de 47,43 ha.</div>
+        <div><strong>2. Contracción en Período Seco (Verano–Otoño, Noviembre a Abril) y Pérdida Evaporativa:</strong> Durante el verano patagónico, el almacenamiento medio desciende a <strong>${sumVol}</strong> (${k.verano_media_ha} ha). Esto significa que <strong>todos los años se pierden naturalmente a la atmósfera alrededor de ${evapLoss} por evaporación directa</strong> entre primavera y otoño.</div>
+        <div><strong>3. Conclusión Clave para el Permiso Regulatorio:</strong> La extracción controlada de una fracción menor de ese volumen (ej. 15.000 a 30.000 m³/año, concentrada preferentemente entre mayo y noviembre o sujeta a cota mínima) <strong>aprovecha agua que de otro modo se evapora en el estiaje</strong>, sin afectar la capacidad de recarga interanual demostrada a lo largo de 41 años (1985–2026).</div>
+      `;
+    }
+
+    function setSeriesMode(mode) {
+      SERIES_MODE = mode;
+      ['vol', 'seasonal', 'max', 'mndwi'].forEach(m => {
+        document.getElementById('btn-mode-' + m).classList.toggle('active', m === mode);
+      });
+      renderAnnualChart();
+    }
+
+    function renderAnnualChart() {
+      const container = document.getElementById('chart-annual');
+      const tip = document.getElementById('tip-annual');
+      container.querySelectorAll('svg').forEach(n => n.remove());
+
+      const W = container.clientWidth || 960;
+      const H = 370;
+      const m = { top: 18, right: 58, bottom: 34, left: 68 };
+      const H_top = 245;
+      const H_bot_top = 268;
+      const H_bot = H - m.bottom;
+
+      const svg = d3.select(container).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`);
+      const rows = DATA.annual_series.filter(d => d.n_scenes > 0);
+      const x = d3.scaleLinear().domain([1985, 2026]).range([m.left, W - m.right]);
+      const f = scenFactor();
+
+      const leg = document.getElementById('series-legend');
+      if (SERIES_MODE === 'vol') {
+        leg.innerHTML = `
+          <span><i style="background:#38bdf8"></i> Volumen Medio Invierno (May–Oct, m³)</span>
+          <span><i style="background:#f59e0b"></i> Volumen Medio Verano (Nov–Abr, m³)</span>
+          <span><i style="background:rgba(56,189,248,0.2);height:10px"></i> Pérdida / Diferencial Estacional (m³)</span>
+          <span><i style="background:#0284c7;height:8px"></i> Lluvia Anual (mm, panel inferior)</span>
+        `;
+      } else if (SERIES_MODE === 'seasonal') {
+        leg.innerHTML = `
+          <span><i style="background:#38bdf8"></i> Espejo Invierno (May–Oct, ha)</span>
+          <span><i style="background:#f59e0b"></i> Espejo Verano (Nov–Abr, ha)</span>
+          <span><i style="background:rgba(56,189,248,0.2);height:10px"></i> Amplitud Estacional (ha)</span>
+        `;
+      } else if (SERIES_MODE === 'max') {
+        leg.innerHTML = `
+          <span><i style="background:#10b981"></i> Pico Máximo Anual (ha)</span>
+          <span><i style="background:#38bdf8"></i> Promedio Anual (ha)</span>
+        `;
+      } else {
+        leg.innerHTML = `<span><i style="background:#38bdf8"></i> Índice MNDWI Medio en Cubeta Principal</span>`;
+      }
+
+      if (SERIES_MODE === 'vol') {
+        const yMax = Math.max(260000 * f, d3.max(rows, d => Math.max((d.win_vol_mean_m3 || 0) * f, (d.sum_vol_mean_m3 || 0) * f)) * 1.1);
+        const y = d3.scaleLinear().domain([0, yMax]).range([H_top, m.top]);
+
+        y.ticks(5).forEach(v => {
+          svg.append('line').attr('x1', m.left).attr('x2', W - m.right).attr('y1', y(v)).attr('y2', y(v)).attr('stroke', '#1e293b');
+          svg.append('text').attr('x', m.left - 8).attr('y', y(v) + 4).attr('text-anchor', 'end').attr('fill', '#94a3b8').attr('font-size', 10.5)
+            .text((v / 1000).toFixed(0) + 'k m³');
+        });
+
+        const coreVol = DATA.volumenes_resumen.cubeta_ppal_llena_base_m3 * f;
+        svg.append('line').attr('x1', m.left).attr('x2', W - m.right).attr('y1', y(coreVol)).attr('y2', y(coreVol))
+          .attr('stroke', '#475569').attr('stroke-dasharray', '4,4');
+        svg.append('text').attr('x', W - m.right - 4).attr('y', y(coreVol) - 5).attr('text-anchor', 'end')
+          .attr('fill', '#64748b').attr('font-size', 10).text(`Cubeta Principal Llena (${fmtM3(coreVol)})`);
+
+        const bothRows = rows.filter(d => d.win_vol_mean_m3 !== null && d.sum_vol_mean_m3 !== null);
+        const areaBand = d3.area()
+          .x(d => x(d.year))
+          .y0(d => y(d.sum_vol_mean_m3 * f))
+          .y1(d => y(d.win_vol_mean_m3 * f))
+          .curve(d3.curveMonotoneX);
+        svg.append('path').datum(bothRows).attr('d', areaBand).attr('fill', 'rgba(56, 189, 248, 0.16)');
+
+        const winRows = rows.filter(d => d.win_vol_mean_m3 !== null);
+        const sumRows = rows.filter(d => d.sum_vol_mean_m3 !== null);
+
+        const lineWin = d3.line().x(d => x(d.year)).y(d => y(d.win_vol_mean_m3 * f)).curve(d3.curveMonotoneX);
+        const lineSum = d3.line().x(d => x(d.year)).y(d => y(d.sum_vol_mean_m3 * f)).curve(d3.curveMonotoneX);
+
+        svg.append('path').datum(winRows).attr('d', lineWin).attr('fill', 'none').attr('stroke', '#38bdf8').attr('stroke-width', 2.4);
+        svg.append('path').datum(sumRows).attr('d', lineSum).attr('fill', 'none').attr('stroke', '#f59e0b').attr('stroke-width', 2.2);
+
+        svg.selectAll('.dot-win').data(winRows).join('circle')
+          .attr('cx', d => x(d.year)).attr('cy', d => y(d.win_vol_mean_m3 * f)).attr('r', 3.5).attr('fill', '#38bdf8');
+        svg.selectAll('.dot-sum').data(sumRows).join('circle')
+          .attr('cx', d => x(d.year)).attr('cy', d => y(d.sum_vol_mean_m3 * f)).attr('r', 3.5).attr('fill', '#f59e0b');
+
+      } else if (SERIES_MODE !== 'mndwi') {
+        const yMax = Math.max(68, d3.max(rows, d => Math.max(d.annual_max_ha || 0, d.win_mean_ha || 0)) * 1.08);
+        const y = d3.scaleLinear().domain([0, yMax]).range([H_top, m.top]);
+
+        y.ticks(5).forEach(v => {
+          svg.append('line').attr('x1', m.left).attr('x2', W - m.right).attr('y1', y(v)).attr('y2', y(v)).attr('stroke', '#1e293b');
+          svg.append('text').attr('x', m.left - 8).attr('y', y(v) + 4).attr('text-anchor', 'end').attr('fill', '#94a3b8').attr('font-size', 11).text(v + ' ha');
+        });
+
+        const coreHa = DATA.geometria.cubeta_principal_ha;
+        svg.append('line').attr('x1', m.left).attr('x2', W - m.right).attr('y1', y(coreHa)).attr('y2', y(coreHa))
+          .attr('stroke', '#475569').attr('stroke-dasharray', '4,4');
+
+        if (SERIES_MODE === 'seasonal') {
+          const bothRows = rows.filter(d => d.win_mean_ha !== null && d.sum_mean_ha !== null);
+          const areaBand = d3.area().x(d => x(d.year)).y0(d => y(d.sum_mean_ha)).y1(d => y(d.win_mean_ha)).curve(d3.curveMonotoneX);
+          svg.append('path').datum(bothRows).attr('d', areaBand).attr('fill', 'rgba(56, 189, 248, 0.16)');
+
+          const winRows = rows.filter(d => d.win_mean_ha !== null);
+          const sumRows = rows.filter(d => d.sum_mean_ha !== null);
+          svg.append('path').datum(winRows).attr('d', d3.line().x(d => x(d.year)).y(d => y(d.win_mean_ha)).curve(d3.curveMonotoneX)).attr('fill', 'none').attr('stroke', '#38bdf8').attr('stroke-width', 2.4);
+          svg.append('path').datum(sumRows).attr('d', d3.line().x(d => x(d.year)).y(d => y(d.sum_mean_ha)).curve(d3.curveMonotoneX)).attr('fill', 'none').attr('stroke', '#f59e0b').attr('stroke-width', 2.2);
+          svg.selectAll('.dot-win').data(winRows).join('circle').attr('cx', d => x(d.year)).attr('cy', d => y(d.win_mean_ha)).attr('r', 3.5).attr('fill', '#38bdf8');
+          svg.selectAll('.dot-sum').data(sumRows).join('circle').attr('cx', d => x(d.year)).attr('cy', d => y(d.sum_mean_ha)).attr('r', 3.5).attr('fill', '#f59e0b');
+        } else {
+          svg.append('path').datum(rows).attr('d', d3.line().x(d => x(d.year)).y(d => y(d.annual_max_ha)).curve(d3.curveMonotoneX)).attr('fill', 'none').attr('stroke', '#10b981').attr('stroke-width', 2.4);
+          svg.append('path').datum(rows).attr('d', d3.line().x(d => x(d.year)).y(d => y(d.annual_mean_ha)).curve(d3.curveMonotoneX)).attr('fill', 'none').attr('stroke', '#38bdf8').attr('stroke-width', 2.2);
+          svg.selectAll('.dot-max').data(rows).join('circle').attr('cx', d => x(d.year)).attr('cy', d => y(d.annual_max_ha)).attr('r', 3.5).attr('fill', '#10b981');
+          svg.selectAll('.dot-mean').data(rows).join('circle').attr('cx', d => x(d.year)).attr('cy', d => y(d.annual_mean_ha)).attr('r', 3.2).attr('fill', '#38bdf8');
+        }
+      } else {
+        const y = d3.scaleLinear().domain([-0.4, 0.4]).range([H_top, m.top]);
+        [-0.3, -0.15, 0, 0.15, 0.3].forEach(v => {
+          svg.append('line').attr('x1', m.left).attr('x2', W - m.right).attr('y1', y(v)).attr('y2', y(v)).attr('stroke', v === 0 ? '#475569' : '#1e293b');
+          svg.append('text').attr('x', m.left - 8).attr('y', y(v) + 4).attr('text-anchor', 'end').attr('fill', '#94a3b8').attr('font-size', 11).text(v.toFixed(2));
+        });
+        svg.append('path').datum(rows).attr('d', d3.line().x(d => x(d.year)).y(d => y(d.mndwi_mean)).curve(d3.curveMonotoneX)).attr('fill', 'none').attr('stroke', '#38bdf8').attr('stroke-width', 2.4);
+        svg.selectAll('.dot-m').data(rows).join('circle').attr('cx', d => x(d.year)).attr('cy', d => y(d.mndwi_mean)).attr('r', 3.5).attr('fill', '#38bdf8');
+      }
+
+      // Precipitation sub-panel
+      const allYears = DATA.annual_series;
+      const pMax = d3.max(allYears, d => d.precip_mm) || 300;
+      const yP = d3.scaleLinear().domain([0, pMax * 1.1]).range([H_bot, H_bot_top]);
+      const bw = Math.max(4, (W - m.left - m.right) / 46);
+
+      svg.append('line').attr('x1', m.left).attr('x2', W - m.right).attr('y1', H_bot).attr('y2', H_bot).attr('stroke', '#334155');
+      svg.append('text').attr('x', m.left - 8).attr('y', H_bot_top + 10).attr('text-anchor', 'end').attr('fill', '#64748b').attr('font-size', 10).text('Lluvia');
+
+      svg.selectAll('.bar-p').data(allYears).join('rect')
+        .attr('x', d => x(d.year) - bw / 2)
+        .attr('y', d => yP(d.precip_mm))
+        .attr('width', bw)
+        .attr('height', d => Math.max(0, H_bot - yP(d.precip_mm)))
+        .attr('fill', '#0284c7').attr('opacity', 0.65).attr('rx', 2);
+
+      x.ticks(10).forEach(yr => {
+        svg.append('text').attr('x', x(yr)).attr('y', H - 8).attr('text-anchor', 'middle').attr('fill', '#94a3b8').attr('font-size', 11).text(yr);
+      });
+
+      svg.append('rect')
+        .attr('x', m.left).attr('y', m.top)
+        .attr('width', W - m.left - m.right).attr('height', H - m.top - m.bottom)
+        .attr('fill', 'transparent')
+        .on('mousemove', (ev) => {
+          const [mx] = d3.pointer(ev);
+          const yr = Math.round(x.invert(mx));
+          const d = DATA.annual_series.find(r => r.year === yr);
+          if (!d) return;
+          tip.style.display = 'block';
+          tip.style.left = Math.min(W - 255, Math.max(10, mx + 14)) + 'px';
+          tip.style.top = '20px';
+          tip.innerHTML = `
+            <div style="font-weight:700;color:#38bdf8;margin-bottom:4px">Año ${d.year} (${d.n_scenes} escenas)</div>
+            <div>• Invierno: <strong>${d.win_mean_ha !== null ? d.win_mean_ha + ' ha' : 's/d'}</strong> (${d.win_vol_mean_m3 !== null ? fmtM3(d.win_vol_mean_m3 * f) : 's/d'})</div>
+            <div>• Verano: <strong>${d.sum_mean_ha !== null ? d.sum_mean_ha + ' ha' : 's/d'}</strong> (${d.sum_vol_mean_m3 !== null ? fmtM3(d.sum_vol_mean_m3 * f) : 's/d'})</div>
+            <div>• Pico Máximo: <strong>${d.annual_max_ha !== null ? d.annual_max_ha + ' ha' : 's/d'}</strong> (${d.annual_vol_max_m3 !== null ? fmtM3(d.annual_vol_max_m3 * f) : 's/d'})</div>
+            <div style="margin-top:4px;border-top:1px solid #334155;padding-top:4px;color:#cbd5e1">
+              Lluvia anual: <strong>${d.precip_mm} mm</strong> (Inv: ${d.win_precip_mm} mm)
+            </div>
+          `;
+        })
+        .on('mouseleave', () => { tip.style.display = 'none'; });
+    }
+
+    function renderHypsometryChart() {
+      const container = document.getElementById('chart-hypsometry');
+      const tip = document.getElementById('tip-hypsometry');
+      container.querySelectorAll('svg').forEach(n => n.remove());
+
+      const W = container.clientWidth || 520;
+      const H = 260;
+      const m = { top: 16, right: 24, bottom: 34, left: 64 };
+      const svg = d3.select(container).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`);
+
+      const hyp = DATA.hypsometry;
+      const x = d3.scaleLinear().domain([0, 68]).range([m.left, W - m.right]);
+      const y = d3.scaleLinear().domain([0, 550000]).range([H - m.bottom, m.top]);
+
+      y.ticks(5).forEach(v => {
+        svg.append('line').attr('x1', m.left).attr('x2', W - m.right).attr('y1', y(v)).attr('y2', y(v)).attr('stroke', '#1e293b');
+        svg.append('text').attr('x', m.left - 6).attr('y', y(v) + 4).attr('text-anchor', 'end').attr('fill', '#94a3b8').attr('font-size', 10)
+          .text((v / 1000).toFixed(0) + 'k m³');
+      });
+
+      x.ticks(6).forEach(v => {
+        svg.append('text').attr('x', x(v)).attr('y', H - 8).attr('text-anchor', 'middle').attr('fill', '#94a3b8').attr('font-size', 10).text(v + ' ha');
+      });
+
+      // Vertical reference for Invierno Media (34.6 ha) and Cubeta Principal (47.43 ha)
+      [
+        { a: DATA.kpis.invierno_media_ha, lbl: 'Media Inv (34,6 ha)', col: '#38bdf8' },
+        { a: DATA.geometria.cubeta_principal_ha, lbl: 'Cubeta Ppal (47,4 ha)', col: '#94a3b8' }
+      ].forEach(ref => {
+        svg.append('line').attr('x1', x(ref.a)).attr('x2', x(ref.a)).attr('y1', m.top).attr('y2', H - m.bottom)
+          .attr('stroke', ref.col).attr('stroke-dasharray', '3,3').attr('opacity', 0.6);
+        svg.append('text').attr('x', x(ref.a) - 4).attr('y', m.top + 12).attr('text-anchor', 'end').attr('fill', ref.col).attr('font-size', 9.5).text(ref.lbl);
+      });
+
+      const lineBase = d3.line().x(d => x(d.area_ha)).y(d => y(d.vol_base_m3)).curve(d3.curveMonotoneX);
+      const lineCons = d3.line().x(d => x(d.area_ha)).y(d => y(d.vol_conservador_m3)).curve(d3.curveMonotoneX);
+      const lineProf = d3.line().x(d => x(d.area_ha)).y(d => y(d.vol_profundo_m3)).curve(d3.curveMonotoneX);
+
+      svg.append('path').datum(hyp).attr('d', lineProf).attr('fill', 'none').attr('stroke', '#10b981').attr('stroke-width', 1.8).attr('stroke-dasharray', '4,3');
+      svg.append('path').datum(hyp).attr('d', lineBase).attr('fill', 'none').attr('stroke', '#38bdf8').attr('stroke-width', 2.6);
+      svg.append('path').datum(hyp).attr('d', lineCons).attr('fill', 'none').attr('stroke', '#f59e0b').attr('stroke-width', 1.8).attr('stroke-dasharray', '4,3');
+
+      svg.selectAll('.h-dot').data(hyp).join('circle')
+        .attr('cx', d => x(d.area_ha)).attr('cy', d => y(d.vol_base_m3)).attr('r', 3.5).attr('fill', '#38bdf8')
+        .on('mouseenter', (ev, d) => {
+          tip.style.display = 'block';
+          tip.style.left = Math.min(W - 230, Math.max(10, x(d.area_ha) - 60)) + 'px';
+          tip.style.top = '18px';
+          tip.innerHTML = `
+            <div style="font-weight:700;color:#38bdf8">Espejo: ${d.area_ha} ha (Cota ${d.cota_msnm} m)</div>
+            <div>• Tirante máx: <strong>${d.tirante_max_m} m</strong> (medio: ${d.tirante_medio_m} m)</div>
+            <div>• Vol. Base: <strong>${fmtM3(d.vol_base_m3)}</strong></div>
+            <div>• Vol. Conservador: <strong>${fmtM3(d.vol_conservador_m3)}</strong></div>
+            <div>• Vol. Profundo: <strong>${fmtM3(d.vol_profundo_m3)}</strong></div>
+          `;
+        })
+        .on('mouseleave', () => { tip.style.display = 'none'; });
+    }
+
+    function renderExceedanceTable() {
+      const f = scenFactor();
+      const tb = document.querySelector('#table-exceedance tbody');
+      tb.innerHTML = DATA.exceedance.map(r => `
+        <tr>
+          <td><strong>Q${r.garantia_pct} (${r.garantia_pct}% del tiempo)</strong></td>
+          <td>${r.invierno_area_ha} ha</td>
+          <td style="color:#38bdf8;font-weight:600">${fmtM3(r.invierno_vol_base_m3 * f)}</td>
+          <td>${r.verano_area_ha} ha</td>
+          <td style="color:#f59e0b;font-weight:600">${fmtM3(r.verano_vol_base_m3 * f)}</td>
+        </tr>
+      `).join('');
+    }
+
+    function updateSimulator() {
+      const qDay = +document.getElementById('sim-q').value;
+      const days = +document.getElementById('sim-days').value;
+      const f = scenFactor();
+      const lps = (qDay * 1000) / 86400;
+
+      document.getElementById('lbl-sim-q').textContent = `${qDay} m³/día (${lps.toFixed(2)} L/s)`;
+      document.getElementById('lbl-sim-days').textContent = `${days} días/año (${days <= 200 ? 'Bombeo Estacional May–Nov' : 'Bombeo Anual Continuo'})`;
+
+      const annualReq = qDay * days;
+      const winVol = DATA.volumenes_resumen.invierno_media_base_m3 * f;
+      const evapLoss = DATA.volumenes_resumen.perdida_evaporacion_estival_media_m3 * f;
+
+      const pctOfWinter = (annualReq / Math.max(1, winVol)) * 100;
+      const pctOfEvap = (annualReq / Math.max(1, evapLoss)) * 100;
+
+      document.getElementById('sim-kpis').innerHTML = `
+        <div class="card" style="padding:12px">
+          <div class="kpi-title">Volumen Anual Solicitado</div>
+          <div class="kpi-big" style="font-size:1.45rem;color:#38bdf8">${fmtM3(annualReq)}/año</div>
+          <div class="muted">${qDay} m³/día × ${days} días</div>
+        </div>
+        <div class="card" style="padding:12px">
+          <div class="kpi-title">% del Almacenamiento Invernal</div>
+          <div class="kpi-big" style="font-size:1.45rem;color:${pctOfWinter <= 25 ? '#10b981' : (pctOfWinter <= 45 ? '#f59e0b' : '#f43f5e')}">${pctOfWinter.toFixed(1)}%</div>
+          <div class="muted">Equivale al ${pctOfEvap.toFixed(1)}% de lo que se evapora en verano</div>
+        </div>
+      `;
+
+      let statusTitle = '';
+      let statusDesc = '';
+      if (pctOfWinter <= 20) {
+        statusTitle = '✅ VIABILIDAD ALTA (Extracción de Bajo Impacto Hídrico)';
+        statusDesc = `El cupo de <strong>${fmtM3(annualReq)}/año</strong> representa apenas el <strong>${pctOfWinter.toFixed(1)}%</strong> del almacenamiento medio invernal (${fmtM3(winVol)}) y solo el <strong>${pctOfEvap.toFixed(1)}%</strong> del agua que la laguna pierde naturalmente por evaporación cada verano (${fmtM3(evapLoss)}). Altamente defendible ante el Consejo Agrario Provincial / Recursos Hídricos.`;
+      } else if (pctOfWinter <= 40) {
+        statusTitle = '⚠️ VIABILIDAD MODERADA (Requiere Regla Operativa Estacional)';
+        statusDesc = `El cupo de <strong>${fmtM3(annualReq)}/año</strong> equivale al <strong>${pctOfWinter.toFixed(1)}%</strong> del volumen medio invernal. Se recomienda concentrar la captación en la ventana húmeda (Mayo–Noviembre) y comprometer un umbral de corte si el espejo cae por debajo de 15 ha.`;
+      } else {
+        statusTitle = '🛑 EXTRACCIÓN INTENSIVA (Condicionada a Años Húmedos P75)';
+        statusDesc = `El cupo de <strong>${fmtM3(annualReq)}/año</strong> supera el 40% del almacenamiento medio invernal en el escenario <em>${scenLabel()}</em>. Para solicitar este volumen se requiere batimetría de detalle y regla de bombeo supeditada a niveles altos (>35 ha).`;
+      }
+
+      document.getElementById('sim-verdict').innerHTML = `
+        <div><strong>${statusTitle}</strong></div>
+        <div>${statusDesc}</div>
+        <div style="font-size:0.81rem;color:#94a3b8;margin-top:4px">
+          <strong>Cláusula de Garantía Ambiental sugerida para el expediente:</strong> Operación al 100% del cupo con espejo ≥ 15 ha (cota ≥ 112,75 m s.n.m.); reducción al 50% entre 10 y 15 ha; suspensión preventiva de bombeo con espejo &lt; 10 ha.
+        </div>
+      `;
+    }
+
+    function renderMonthlyChart() {
+      const container = document.getElementById('chart-monthly');
+      const tip = document.getElementById('tip-monthly');
+      container.querySelectorAll('svg').forEach(n => n.remove());
+
+      const W = container.clientWidth || 520;
+      const H = 290;
+      const m = { top: 18, right: 44, bottom: 32, left: 60 };
+      const svg = d3.select(container).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`);
+
+      const f = scenFactor();
+      const data = DATA.monthly_cycle;
+      const x = d3.scalePoint().domain(data.map(d => d.name)).range([m.left, W - m.right]).padding(0.3);
+      const yMax = Math.max(250000 * f, d3.max(data, d => d.vol_p75_m3 * f) * 1.12);
+      const y = d3.scaleLinear().domain([0, yMax]).range([H - m.bottom, m.top]);
+      const yP = d3.scaleLinear().domain([0, 45]).range([H - m.bottom, m.top]);
+
+      y.ticks(5).forEach(v => {
+        svg.append('line').attr('x1', m.left).attr('x2', W - m.right).attr('y1', y(v)).attr('y2', y(v)).attr('stroke', '#1e293b');
+        svg.append('text').attr('x', m.left - 6).attr('y', y(v) + 4).attr('text-anchor', 'end').attr('fill', '#94a3b8').attr('font-size', 10)
+          .text((v / 1000).toFixed(0) + 'k m³');
+      });
+
+      const xMay = x('May'), xOct = x('Oct');
+      svg.append('rect').attr('x', xMay - 12).attr('y', m.top).attr('width', (xOct - xMay) + 24).attr('height', H - m.top - m.bottom)
+        .attr('fill', 'rgba(56, 189, 248, 0.06)');
+      svg.append('text').attr('x', (xMay + xOct) / 2).attr('y', m.top + 13).attr('text-anchor', 'middle')
+        .attr('fill', '#38bdf8').attr('font-size', 10).text('Ventana Óptima de Recarga y Captación (May–Oct)');
+
+      const band = d3.area().x(d => x(d.name)).y0(d => y(d.vol_p25_m3 * f)).y1(d => y(d.vol_p75_m3 * f)).curve(d3.curveMonotoneX);
+      svg.append('path').datum(data).attr('d', band).attr('fill', 'rgba(56, 189, 248, 0.24)');
+
+      const lineVol = d3.line().x(d => x(d.name)).y(d => y(d.vol_mean_m3 * f)).curve(d3.curveMonotoneX);
+      svg.append('path').datum(data).attr('d', lineVol).attr('fill', 'none').attr('stroke', '#38bdf8').attr('stroke-width', 2.6);
+
+      const linePrecip = d3.line().x(d => x(d.name)).y(d => yP(d.precip_mean_mm)).curve(d3.curveMonotoneX);
+      svg.append('path').datum(data).attr('d', linePrecip).attr('fill', 'none').attr('stroke', '#f59e0b').attr('stroke-width', 2).attr('stroke-dasharray', '4,3');
+
+      svg.selectAll('.m-dot').data(data).join('circle')
+        .attr('cx', d => x(d.name)).attr('cy', d => y(d.vol_mean_m3 * f)).attr('r', 4).attr('fill', '#38bdf8')
+        .on('mouseenter', (ev, d) => {
+          tip.style.display = 'block';
+          tip.style.left = Math.min(W - 230, Math.max(10, x(d.name) - 60)) + 'px';
+          tip.style.top = '18px';
+          tip.innerHTML = `
+            <div style="font-weight:700;color:#38bdf8">${d.name} (${d.n_scenes} escenas)</div>
+            <div>• Volumen medio: <strong>${fmtM3(d.vol_mean_m3 * f)}</strong> (${d.area_mean_ha} ha)</div>
+            <div>• Rango P25–P75: <strong>${fmtM3(d.vol_p25_m3 * f)} – ${fmtM3(d.vol_p75_m3 * f)}</strong></div>
+            <div>• Lluvia media: <strong>${d.precip_mean_mm} mm</strong> | ET₀: <strong>${d.et0_mean_mm} mm</strong></div>
+          `;
+        })
+        .on('mouseleave', () => { tip.style.display = 'none'; });
+
+      data.forEach(d => {
+        svg.append('text').attr('x', x(d.name)).attr('y', H - 10).attr('text-anchor', 'middle').attr('fill', '#cbd5e1').attr('font-size', 11).text(d.name);
+      });
+    }
+
+    function renderDecades() {
+      const f = scenFactor();
+      const tb = document.querySelector('#table-decades tbody');
+      tb.innerHTML = DATA.decades.map(d => `
+        <tr>
+          <td><strong>${d.periodo}</strong></td>
+          <td>${d.n_escenas}</td>
+          <td style="color:#38bdf8;font-weight:600">${d.invierno_ha > 0 ? `${d.invierno_ha} ha (${fmtM3(d.invierno_vol_m3 * f)})` : 's/d'}</td>
+          <td style="color:#f59e0b;font-weight:600">${d.verano_ha} ha (${fmtM3(d.verano_vol_m3 * f)})</td>
+          <td>${fmtM3(d.maximo_vol_m3 * f)}</td>
+          <td>${d.retencion_estival_pct > 0 ? d.retencion_estival_pct + '%' : '—'}</td>
+          <td>${d.precip_anual_mm} mm</td>
+        </tr>
+      `).join('');
+      renderDecadesChart();
+    }
+
+    function renderDecadesChart() {
+      const container = document.getElementById('chart-decades');
+      container.querySelectorAll('svg').forEach(n => n.remove());
+      const W = container.clientWidth || 500;
+      const H = 185;
+      const m = { top: 14, right: 20, bottom: 26, left: 58 };
+      const svg = d3.select(container).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`);
+
+      const f = scenFactor();
+      const decs = DATA.decades;
+      const x0 = d3.scaleBand().domain(decs.map(d => d.periodo)).range([m.left, W - m.right]).padding(0.28);
+      const x1 = d3.scaleBand().domain(['inv', 'ver']).range([0, x0.bandwidth()]).padding(0.12);
+      const y = d3.scaleLinear().domain([0, Math.max(200000 * f, d3.max(decs, d => Math.max(d.invierno_vol_m3, d.verano_vol_m3) * f) * 1.15)]).range([H - m.bottom, m.top]);
+
+      y.ticks(4).forEach(v => {
+        svg.append('line').attr('x1', m.left).attr('x2', W - m.right).attr('y1', y(v)).attr('y2', y(v)).attr('stroke', '#1e293b');
+        svg.append('text').attr('x', m.left - 6).attr('y', y(v) + 4).attr('text-anchor', 'end').attr('fill', '#94a3b8').attr('font-size', 10)
+          .text((v / 1000).toFixed(0) + 'k m³');
+      });
+
+      const g = svg.selectAll('.dec-g').data(decs).join('g').attr('transform', d => `translate(${x0(d.periodo)},0)`);
+      g.append('rect').attr('x', x1('inv')).attr('y', d => y(d.invierno_vol_m3 * f)).attr('width', x1.bandwidth())
+        .attr('height', d => H - m.bottom - y(d.invierno_vol_m3 * f)).attr('fill', '#38bdf8').attr('rx', 3);
+      g.append('rect').attr('x', x1('ver')).attr('y', d => y(d.verano_vol_m3 * f)).attr('width', x1.bandwidth())
+        .attr('height', d => H - m.bottom - y(d.verano_vol_m3 * f)).attr('fill', '#f59e0b').attr('rx', 3);
+
+      decs.forEach(d => {
+        svg.append('text').attr('x', x0(d.periodo) + x0.bandwidth() / 2).attr('y', H - 8).attr('text-anchor', 'middle')
+          .attr('fill', '#cbd5e1').attr('font-size', 11).text(d.periodo);
+      });
+    }
+
+    function renderDossierLists() {
+      const v = DATA.volumenes_resumen;
+      const c = v.coordenadas_oficiales;
+      const g = DATA.geometria;
+      const f = scenFactor();
+
+      document.getElementById('list-ready-params').innerHTML = [
+        `<li><span class="tag-ready">LISTO</span><strong>Coordenadas WGS84:</strong><br/><code>${c.wgs84_dms}</code> (${c.wgs84_dd})</li>`,
+        `<li><span class="tag-ready">LISTO</span><strong>POSGAR 2007 Faja 2 (EPSG:5344):</strong><br/><code>${c.posgar2007_faja2_epsg5344}</code></li>`,
+        `<li><span class="tag-ready">LISTO</span><strong>Campo Inchauspe Faja 2 (EPSG:22192):</strong><br/><code>${c.inchauspe_faja2_epsg22192}</code></li>`,
+        `<li><span class="tag-ready">LISTO</span><strong>UTM Zona 19S (EPSG:32719):</strong><br/><code>${c.utm_19s_epsg32719}</code></li>`,
+        `<li><span class="tag-ready">LISTO</span><strong>Cotas Altimétricas (Copernicus DEM 30m):</strong><br/>Fondo cubeta: <strong>${v.cota_fondo_msnm} m s.n.m.</strong> · Borde ppal: <strong>${v.cota_borde_ppal_msnm} m</strong> · Expansión máx: <strong>${v.cota_borde_exp_msnm} m</strong></li>`,
+        `<li><span class="tag-ready">LISTO</span><strong>Morfometría de Cuenca y Cubeta:</strong><br/>Cuenca de aporte: <strong>${v.cuenca_aporte_km2} km²</strong> · Cubeta principal: <strong>${g.cubeta_principal_ha} ha</strong> · Cubeta máx: <strong>${g.cubeta_expansion_ha} ha</strong> · Distancia al camino norte: <strong>${v.distancia_camino_norte_m} m</strong></li>`
+      ].join('');
+
+      document.getElementById('list-arguments').innerHTML = [
+        `<li><span class="tag-ready">FUNDAMENTO 1</span><strong>Sistema Endorreico sin Afectación a Terceros Aguas Abajo:</strong><br/>Al tratarse de un bajo cerrado sin emisario superficial (cota 112,2 m rodeada por divisoria de 164–216 m s.n.m.), el agua acumulada no alimenta cursos permanentes aguas abajo.</li>`,
+        `<li><span class="tag-ready">FUNDAMENTO 2</span><strong>Captura de Pérdida Natural por Evaporación Estival:</strong><br/>Entre invierno (${fmtM3(v.invierno_media_base_m3 * f)}) y verano (${fmtM3(v.verano_media_base_m3 * f)}), la laguna pierde a la atmósfera <strong>${fmtM3(v.perdida_evaporacion_estival_media_m3 * f)}/año</strong> por evaporación. El permiso aprovecha una fracción de esa pérdida evaporativa.</li>`,
+        `<li><span class="tag-ready">FUNDAMENTO 3</span><strong>Resiliencia Interanual Demostrada (1985–2026):</strong><br/>En las 4 décadas analizadas (incluyendo la década seca 2005–2014 con 213 mm/año), la recarga invernal se mantuvo estable en ~35,3 ha (${fmtM3(177500 * f)}), confirmando la recarga anual recurrente.</li>`,
+        `<li><span class="tag-ready">FUNDAMENTO 4</span><strong>Ubicación Óptima del Punto de Toma:</strong><br/>La coordenada <code>47°37'46.09"S, 67°25'42.3"O</code> se ubica en el sector con <strong>>75% de permanencia invernal</strong> y a solo <strong>540 m de la traza vial existente al norte</strong>, evitando apertura de nuevas trazas extensas.</li>`
+      ].join('');
+    }
+
+    function renderScenesTable() {
+      const fSeason = document.getElementById('filter-season').value;
+      const fSensor = document.getElementById('filter-sensor').value;
+      const f = scenFactor();
+      const rows = DATA.scenes.filter(s => {
+        if (fSeason !== 'ALL' && !s.season.includes(fSeason)) return false;
+        if (fSensor !== 'ALL' && s.family !== fSensor) return false;
+        return true;
+      }).slice().reverse();
+
+      const tb = document.querySelector('#table-scenes tbody');
+      tb.innerHTML = rows.map(s => `
+        <tr>
+          <td><strong>${s.fecha}</strong></td>
+          <td style="color:${s.season.includes('Invierno') ? '#38bdf8' : '#f59e0b'}">${s.season}</td>
+          <td>${s.sensor}</td>
+          <td><strong>${s.area_open_ha} ha</strong></td>
+          <td>${s.cota_msnm} m</td>
+          <td>${(s.tirante_max_m * f).toFixed(2)} m</td>
+          <td style="color:#38bdf8;font-weight:600">${fmtM3(s.vol_base_m3 * f)}</td>
+          <td>${s.mndwi_mean}</td>
+          <td class="muted" style="font-family:monospace;font-size:0.74rem">${s.id}</td>
+        </tr>
+      `).join('');
+    }
+
+    function downloadCSV() {
+      const headers = ['fecha','year','month','season','sensor','area_open_ha','cota_msnm','tirante_max_m','vol_base_m3','vol_cons_m3','vol_prof_m3','mndwi_mean','valid_pct','id'];
+      const csv = [
+        headers.join(','),
+        ...DATA.scenes.map(r => headers.map(h => JSON.stringify(r[h] ?? '')).join(','))
+      ].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'hidrologia_y_volumenes_m3_laguna_1985_2026.csv';
+      a.click();
+    }
+
+    init();
+  </script>
+</body>
+</html>
